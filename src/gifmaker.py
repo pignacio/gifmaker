@@ -39,8 +39,13 @@ def _extract_video_data(video):
     data = VideoData(path=video, width=int(w), height=int(h), fps=round(float(fps)))
     return data
 
-def _extract_frames(video, start, duration, output_dir):
-    command = ['avconv', '-i', video, '-ss', str(start), '-t', str(duration), os.path.join(output_dir, 'frames%05d.gif')]
+def _extract_frames(video, output_dir, start=None, duration=None):
+    command = ['avconv', '-i', video]
+    if start is not None:
+        command += ['-ss', str(start)]
+    if duration is not None:
+        command += ['-t', str(duration)]
+    command.append(os.path.join(output_dir, 'frames%05d.gif'))
     subprocess.call(command)
 
 def _make_gif(frames_dir, output, fps, start_frame=None, end_frame=None, loop=True):
@@ -63,7 +68,7 @@ def main():
     tmp_dir = tempfile.mkdtemp()
     logging.info("Temporal dir: '%s'", tmp_dir)
     try:
-        _extract_frames(data.path, 0, 1, tmp_dir)
+        _extract_frames(data.path, tmp_dir, options.start, options.duration)
         os.system('ls %s' % tmp_dir)
         _make_gif(tmp_dir, options.output, data.fps)
     finally:
