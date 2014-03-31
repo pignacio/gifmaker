@@ -29,6 +29,12 @@ def _extract_video_data(video):
 def main():
     data = _extract_video_data(sys.argv[1])
     print data
+    tmp_dir = tempfile.mkdtemp()
+    logging.info("Temporal dir: '%s'", tmp_dir)
+    try:
+        pass
+    finally:
+        os.system("rm -rf %s" % tmp_dir)
 
 
 if __name__ == "__main__":
