@@ -12,7 +12,7 @@ import sys
 import tempfile
 
 
-RE_VIDEO_RES = 'Video:.* (\d+x\d+),'
+RE_VIDEO_RES = 'Video:.* (\d+x\d+)[, ]'
 RE_VIDEO_FPS = 'Video:.* ([\d.]+) fps'
 
 VideoData = namedtuple('VideoData', ['path', 'width', 'height', 'fps'])
