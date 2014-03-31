@@ -74,7 +74,7 @@ def main():
         _extract_frames(data.path, tmp_dir, options.start, options.duration)
         logging.info("Got %s frames...", len(os.listdir(tmp_dir)))
         logging.info("Making output gif: '%s'", options.output)
-        _make_gif(tmp_dir, options.output, data.fps)
+        _make_gif(tmp_dir, options.output, data.fps, loop=options.loop)
         logging.info("Done.")
     finally:
         os.system("rm -rf %s" % tmp_dir)
