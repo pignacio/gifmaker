@@ -30,6 +30,19 @@ def _extract_frames(video, start, duration, output_dir):
     command = ['avconv', '-i', video, '-ss', str(start), '-t', str(duration), os.path.join(output_dir, 'frames%05d.gif')]
     subprocess.call(command)
 
+def _make_gif(frames_dir, output, fps, start_frame=None, end_frame=None, loop=True):
+    frames = sorted(os.listdir(frames_dir))
+    if start_frame is None:
+        start_frame = 0
+    if end_frame is None:
+        end_frame = len(frames)
+    command = ['convert', '-delay', '1x%s' % int(fps)]
+    if loop:
+        command += ['-loop', '0']
+    command += [os.path.join(frames_dir, f) for f in frames[start_frame:end_frame]]
+    command.append(output)
+    subprocess.call(command)
+
 def main():
     data = _extract_video_data(sys.argv[1])
     print data
@@ -38,6 +51,7 @@ def main():
     try:
         _extract_frames(data.path, 0, 1, tmp_dir)
         os.system('ls %s' % tmp_dir)
+        _make_gif(tmp_dir, sys.argv[2], data.fps)
     finally:
         os.system("rm -rf %s" % tmp_dir)
 
