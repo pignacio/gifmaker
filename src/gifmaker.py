@@ -26,16 +26,20 @@ def _extract_video_data(video):
     data = VideoData(path=video, width=int(w), height=int(h), fps=round(float(fps)))
     return data
 
+def _extract_frames(video, start, duration, output_dir):
+    command = ['avconv', '-i', video, '-ss', str(start), '-t', str(duration), os.path.join(output_dir, 'frames%05d.gif')]
+    subprocess.call(command)
+
 def main():
     data = _extract_video_data(sys.argv[1])
     print data
     tmp_dir = tempfile.mkdtemp()
     logging.info("Temporal dir: '%s'", tmp_dir)
     try:
-        pass
+        _extract_frames(data.path, 0, 1, tmp_dir)
+        os.system('ls %s' % tmp_dir)
     finally:
         os.system("rm -rf %s" % tmp_dir)
-
 
 if __name__ == "__main__":
     main()
