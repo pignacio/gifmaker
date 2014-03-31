@@ -3,23 +3,19 @@ Created on Mar 30, 2014
 
 @author: ignacio
 '''
+from collections import namedtuple
+import logging
+import os
+import re
 import subprocess
 import sys
-import re
+import tempfile
 
 
 RE_VIDEO_RES = 'Video:.* (\d+x\d+),'
 RE_VIDEO_FPS = 'Video:.* ([\d.]+) fps'
 
-class VideoData():
-    def __init__(self, path, width, height, fps):
-        self.path = path
-        self.width = int(width)
-        self.height = int(height)
-        self.fps = round(float(fps))
-
-    def __str__(self):
-        return "VideoData:[%s: %sx%s@%s]" % (self.path, self.width, self.height, self.fps)
+VideoData = namedtuple('VideoData', ['path', 'width', 'height', 'fps'])
 
 def _extract_video_data(video):
     command = ["avprobe", video]
@@ -27,7 +23,7 @@ def _extract_video_data(video):
     output = proc.stderr.read()
     w, h = re.search(RE_VIDEO_RES, output).group(1).split("x")
     fps = re.search(RE_VIDEO_FPS, output).group(1)
-    data = VideoData(video, w, h, fps)
+    data = VideoData(path=video, width=int(w), height=int(h), fps=round(float(fps)))
     return data
 
 def main():
