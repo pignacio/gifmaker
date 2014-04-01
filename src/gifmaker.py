@@ -21,9 +21,12 @@ def _get_arg_parser():
     parser = ArgumentParser()
     parser.add_argument("input")
     parser.add_argument("output")
-    parser.add_argument("-s", "--start", type=int, default=None)
-    parser.add_argument("-d", "--duration", type=int, default=None)
-    parser.add_argument("-l", "--loop", action='store_true', default=False)
+    parser.add_argument("-s", "--start", type=int, default=None,
+                        help='Start of the gif, in seconds. Defaults to 0')
+    parser.add_argument("-d", "--duration", type=int, default=None,
+                        help='Duration of the gif, in seconds.')
+    parser.add_argument("-l", "--loop", action='store_true', default=False,
+                        help='Looping gif?')
     return parser
 
 def _parse_args():
