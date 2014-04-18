@@ -31,6 +31,10 @@ def _get_arg_parser():
                         help='Ratio to scale the output. Defaults to 1')
     parser.add_argument("--frameskip", default=None,
                         help='Ratio of skipped frames in format A/B. Defaults to 0 (none skipped)')
+    parser.add_argument("--no-optimize", action='store_false', dest='optimize', default=True,
+                        help='Do NOT optimize the resulting gif')
+    parser.add_argument("-f", "--fuzz", type=int, default=None,
+                        help='Fuzz percentage for gif creation. Defaults to none')
     return parser
 
 def _parse_args():
@@ -61,25 +65,30 @@ def _extract_frames(video_data, output_dir, start=None, duration=None, scale=Non
         scaled_height = int(round(video_data.height * scale))
         scaled_width = int(round(video_data.width * scale))
         command += ['-s', '%sx%s' % (scaled_width, scaled_height)]
-    command.append(os.path.join(output_dir, 'frames%05d.gif'))
+    command.append(os.path.join(output_dir, 'frames%05d.png'))
     logging.info("Running command: %s", command)
     subprocess.call(command)
 
-def _make_gif(frames_dir, output, fps, start_frame=None, end_frame=None, loop=True, frameskip=None):
+def _make_gif(frames_dir, output, fps, options, start_frame=None, end_frame=None):
     frames = sorted(os.listdir(frames_dir))
     if start_frame is None:
         start_frame = 0
     if end_frame is None:
         end_frame = len(frames)
-    skipped, every = frameskip or [0, 1]
+    skipped, every = options.frameskip or [0, 1]
     rate = 1. * every / (every - skipped)
     frame = start_frame
     used_frames = []
     real_fps = round(fps / rate)
 
     command = ['convert', '-delay', '1x%s' % int(real_fps)]
-    if loop:
+    if options.loop:
         command += ['-loop', '0']
+    if options.fuzz is not None:
+        command += ['-fuzz', '%s%%' % options.fuzz]
+    if options.optimize:
+        command += ['-layers', 'optimize']
+
     while int(frame) < end_frame:
         used_frames.append(frames[int(frame)])
         frame += rate
@@ -102,7 +111,7 @@ def main():
         _extract_frames(data, tmp_dir, options.start, options.duration, options.scale)
         logging.info("Got %s frames...", len(os.listdir(tmp_dir)))
         logging.info("Making output gif: '%s'", options.output)
-        _make_gif(tmp_dir, options.output, data.fps, loop=options.loop, frameskip=options.frameskip)
+        _make_gif(tmp_dir, options.output, data.fps, options)
         logging.info("Done.")
     finally:
         os.system("rm -rf %s" % tmp_dir)
