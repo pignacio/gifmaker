@@ -9,7 +9,7 @@ import os
 import re
 import subprocess
 import tempfile
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentError
 
 
 RE_VIDEO_RES = r'Video:.* (\d+x\d+)[, ]'
@@ -29,10 +29,18 @@ def _get_arg_parser():
                         help='Looping gif?')
     parser.add_argument("--scale", type=float, default=1,
                         help='Ratio to scale the output. Defaults to 1')
+    parser.add_argument("--frameskip", default=None,
+                        help='Ratio of skipped frames in format A/B. Defaults to 0 (none skipped)')
     return parser
 
 def _parse_args():
-    return _get_arg_parser().parse_args()
+    options = _get_arg_parser().parse_args()
+    if options.frameskip is not None:
+        try:
+            options.frameskip = [int(x) for x in options.frameskip.split("/")]
+        except Exception:
+            raise ArgumentError("Wrong frameskip format: '%s'" % options.frameskip)
+    return options
 
 def _extract_video_data(video):
     command = ["avprobe", video]
@@ -57,16 +65,26 @@ def _extract_frames(video_data, output_dir, start=None, duration=None, scale=Non
     logging.info("Running command: %s", command)
     subprocess.call(command)
 
-def _make_gif(frames_dir, output, fps, start_frame=None, end_frame=None, loop=True):
+def _make_gif(frames_dir, output, fps, start_frame=None, end_frame=None, loop=True, frameskip=None):
     frames = sorted(os.listdir(frames_dir))
     if start_frame is None:
         start_frame = 0
     if end_frame is None:
         end_frame = len(frames)
-    command = ['convert', '-delay', '1x%s' % int(fps)]
+    skipped, every = frameskip or [0, 1]
+    rate = 1. * every / (every - skipped)
+    frame = start_frame
+    used_frames = []
+    real_fps = round(fps / rate)
+
+    command = ['convert', '-delay', '1x%s' % int(real_fps)]
     if loop:
         command += ['-loop', '0']
-    command += [os.path.join(frames_dir, f) for f in frames[start_frame:end_frame]]
+    while int(frame) < end_frame:
+        used_frames.append(frames[int(frame)])
+        frame += rate
+
+    command += [os.path.join(frames_dir, f) for f in used_frames]
     command.append(output)
     logging.info("Running command: %s", command)
     subprocess.call(command)
@@ -84,7 +102,7 @@ def main():
         _extract_frames(data, tmp_dir, options.start, options.duration, options.scale)
         logging.info("Got %s frames...", len(os.listdir(tmp_dir)))
         logging.info("Making output gif: '%s'", options.output)
-        _make_gif(tmp_dir, options.output, data.fps, loop=options.loop)
+        _make_gif(tmp_dir, options.output, data.fps, loop=options.loop, frameskip=options.frameskip)
         logging.info("Done.")
     finally:
         os.system("rm -rf %s" % tmp_dir)
