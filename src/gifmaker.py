@@ -61,7 +61,7 @@ def _extract_frames(video_data, output_dir, start=None, duration=None, scale=Non
         scaled_height = int(round(video_data.height * scale))
         scaled_width = int(round(video_data.width * scale))
         command += ['-s', '%sx%s' % (scaled_width, scaled_height)]
-    command.append(os.path.join(output_dir, 'frames%05d.gif'))
+    command.append(os.path.join(output_dir, 'frames%05d.png'))
     logging.info("Running command: %s", command)
     subprocess.call(command)
 
