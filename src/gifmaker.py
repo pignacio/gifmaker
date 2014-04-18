@@ -27,6 +27,8 @@ def _get_arg_parser():
                         help='Duration of the gif, in seconds.')
     parser.add_argument("-l", "--loop", action='store_true', default=False,
                         help='Looping gif?')
+    parser.add_argument("--scale", type=float, default=1,
+                        help='Ratio to scale the output. Defaults to 1')
     return parser
 
 def _parse_args():
@@ -41,12 +43,16 @@ def _extract_video_data(video):
     data = VideoData(path=video, width=int(w), height=int(h), fps=round(float(fps)))
     return data
 
-def _extract_frames(video_data, output_dir, start=None, duration=None):
+def _extract_frames(video_data, output_dir, start=None, duration=None, scale=None):
     command = ['avconv', '-i', video_data.path]
     if start is not None:
         command += ['-ss', str(start)]
     if duration is not None:
         command += ['-t', str(duration)]
+    if scale is not None:
+        scaled_height = int(round(video_data.height * scale))
+        scaled_width = int(round(video_data.width * scale))
+        command += ['-s', '%sx%s' % (scaled_width, scaled_height)]
     command.append(os.path.join(output_dir, 'frames%05d.gif'))
     logging.info("Running command: %s", command)
     subprocess.call(command)
@@ -75,7 +81,7 @@ def main():
     logging.info("Temporal dir: '%s'", tmp_dir)
     try:
         logging.info("Extracting frames...")
-        _extract_frames(data, tmp_dir, options.start, options.duration)
+        _extract_frames(data, tmp_dir, options.start, options.duration, options.scale)
         logging.info("Got %s frames...", len(os.listdir(tmp_dir)))
         logging.info("Making output gif: '%s'", options.output)
         _make_gif(tmp_dir, options.output, data.fps, loop=options.loop)
