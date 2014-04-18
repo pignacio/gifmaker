@@ -65,20 +65,20 @@ def _extract_frames(video_data, output_dir, start=None, duration=None, scale=Non
     logging.info("Running command: %s", command)
     subprocess.call(command)
 
-def _make_gif(frames_dir, output, fps, start_frame=None, end_frame=None, loop=True, frameskip=None):
+def _make_gif(frames_dir, output, fps, options, start_frame=None, end_frame=None):
     frames = sorted(os.listdir(frames_dir))
     if start_frame is None:
         start_frame = 0
     if end_frame is None:
         end_frame = len(frames)
-    skipped, every = frameskip or [0, 1]
+    skipped, every = options.frameskip or [0, 1]
     rate = 1. * every / (every - skipped)
     frame = start_frame
     used_frames = []
     real_fps = round(fps / rate)
 
     command = ['convert', '-delay', '1x%s' % int(real_fps)]
-    if loop:
+    if options.loop:
         command += ['-loop', '0']
     while int(frame) < end_frame:
         used_frames.append(frames[int(frame)])
@@ -102,7 +102,7 @@ def main():
         _extract_frames(data, tmp_dir, options.start, options.duration, options.scale)
         logging.info("Got %s frames...", len(os.listdir(tmp_dir)))
         logging.info("Making output gif: '%s'", options.output)
-        _make_gif(tmp_dir, options.output, data.fps, loop=options.loop, frameskip=options.frameskip)
+        _make_gif(tmp_dir, options.output, data.fps, options)
         logging.info("Done.")
     finally:
         os.system("rm -rf %s" % tmp_dir)
