@@ -48,6 +48,7 @@ def _extract_frames(video_data, output_dir, start=None, duration=None):
     if duration is not None:
         command += ['-t', str(duration)]
     command.append(os.path.join(output_dir, 'frames%05d.gif'))
+    logging.info("Running command: %s", command)
     subprocess.call(command)
 
 def _make_gif(frames_dir, output, fps, start_frame=None, end_frame=None, loop=True):
@@ -61,6 +62,7 @@ def _make_gif(frames_dir, output, fps, start_frame=None, end_frame=None, loop=Tr
         command += ['-loop', '0']
     command += [os.path.join(frames_dir, f) for f in frames[start_frame:end_frame]]
     command.append(output)
+    logging.info("Running command: %s", command)
     subprocess.call(command)
 
 def main():
