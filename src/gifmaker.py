@@ -41,8 +41,8 @@ def _extract_video_data(video):
     data = VideoData(path=video, width=int(w), height=int(h), fps=round(float(fps)))
     return data
 
-def _extract_frames(video, output_dir, start=None, duration=None):
-    command = ['avconv', '-i', video]
+def _extract_frames(video_data, output_dir, start=None, duration=None):
+    command = ['avconv', '-i', video_data.path]
     if start is not None:
         command += ['-ss', str(start)]
     if duration is not None:
@@ -73,7 +73,7 @@ def main():
     logging.info("Temporal dir: '%s'", tmp_dir)
     try:
         logging.info("Extracting frames...")
-        _extract_frames(data.path, tmp_dir, options.start, options.duration)
+        _extract_frames(data, tmp_dir, options.start, options.duration)
         logging.info("Got %s frames...", len(os.listdir(tmp_dir)))
         logging.info("Making output gif: '%s'", options.output)
         _make_gif(tmp_dir, options.output, data.fps, loop=options.loop)
