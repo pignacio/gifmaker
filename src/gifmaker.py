@@ -31,6 +31,10 @@ def _get_arg_parser():
                         help='Ratio to scale the output. Defaults to 1')
     parser.add_argument("--frameskip", default=None,
                         help='Ratio of skipped frames in format A/B. Defaults to 0 (none skipped)')
+    parser.add_argument("--no-optimize", action='store_false', dest='optimize', default=True,
+                        help='Do NOT optimize the resulting gif')
+    parser.add_argument("-f", "--fuzz", type=int, default=None,
+                        help='Fuzz percentage for gif creation. Defaults to none')
     return parser
 
 def _parse_args():
@@ -80,6 +84,11 @@ def _make_gif(frames_dir, output, fps, options, start_frame=None, end_frame=None
     command = ['convert', '-delay', '1x%s' % int(real_fps)]
     if options.loop:
         command += ['-loop', '0']
+    if options.fuzz is not None:
+        command += ['-fuzz', '%s%%' % options.fuzz]
+    if options.optimize:
+        command += ['-layers', 'optimize']
+
     while int(frame) < end_frame:
         used_frames.append(frames[int(frame)])
         frame += rate
