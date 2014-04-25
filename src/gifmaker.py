@@ -56,9 +56,10 @@ def _extract_video_data(video):
     return data
 
 def _extract_frames(video_data, output_dir, start=None, duration=None, scale=None):
-    command = ['avconv', '-i', video_data.path]
+    command = ['avconv']
     if start is not None:
         command += ['-ss', str(start)]
+    command += ['-i', video_data.path]
     if duration is not None:
         command += ['-t', str(duration)]
     if scale is not None:
