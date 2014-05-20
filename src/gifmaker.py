@@ -41,7 +41,44 @@ def _get_arg_parser():
     parser.add_argument("-f", "--fuzz", type=int, default=None,
                         help='Fuzz percentage for gif creation. '
                         'Defaults to none')
+    parser.add_argument("--crop", type=CropArea.from_arg, default=None,
+                        help=("Rectangular area to crop from the input, "
+                              "in format width:height:x:y. Accepts "
+                              "relative and absolute values."))
     return parser
+
+
+class CropArea():
+    def __init__(self, width, height, xpos, ypos):
+        values = [width, height, xpos, ypos]
+        if any(x < 0 for x in values):
+            raise ValueError("Some dimension is negative")
+        self._percentages = all(x < 1 for x in values)
+        self._width = width
+        self._height = height
+        self._xpos = xpos
+        self._ypos = ypos
+
+    def crop_argument(self, width, height, scale=None):
+        return ":".join(map(str, self._get_values(width, height, scale)))
+
+    def _get_values(self, width, height, scale):
+        if self._percentages:
+            values = [self._width * width, self._height * height,
+                      self._xpos * width, self._ypos * height]
+        else:
+            values = [self._width, self._height, self._xpos, self._ypos]
+        if scale is not None:
+            values = [v * scale for v in values]
+        return values
+
+    @classmethod
+    def from_arg(cls, arg):
+        try:
+            width, height, xpos, ypos = map(float, arg.split(":"))
+        except ValueError:
+            raise ValueError("Invalid crop argument: '{}'".format(arg))
+        return cls(width, height, xpos, ypos)
 
 
 def start_time(start):
@@ -75,13 +112,17 @@ def _extract_video_data(video):
 
 
 def _extract_frames(video_data, output_dir, start=None, duration=None,
-                    scale=None):
+                    scale=None, crop=None):
     command = ['avconv']
     if start is not None:
         command += ['-ss', str(start)]
     command += ['-i', video_data.path]
     if duration is not None:
         command += ['-t', str(duration)]
+    if crop is not None:
+        command += ['-vf', 'crop=%s' % crop.crop_argument(video_data.width,
+                                                          video_data.height,
+                                                          scale)]
     if scale is not None:
         scaled_height = int(round(video_data.height * scale))
         scaled_width = int(round(video_data.width * scale))
@@ -133,7 +174,7 @@ def main():
     try:
         logging.info("Extracting frames...")
         _extract_frames(data, tmp_dir, options.start, options.duration,
-                        options.scale)
+                        options.scale, options.crop)
         logging.info("Got %s frames...", len(os.listdir(tmp_dir)))
         logging.info("Making output gif: '%s'", options.output)
         _make_gif(tmp_dir, options.output, data.fps, options)
