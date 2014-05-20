@@ -17,6 +17,7 @@ RE_VIDEO_FPS = r'Video:.* ([\d.]+) fps'
 
 VideoData = namedtuple('VideoData', ['path', 'width', 'height', 'fps'])
 
+
 def _get_arg_parser():
     parser = ArgumentParser()
     parser.add_argument("input")
@@ -31,21 +32,62 @@ def _get_arg_parser():
     parser.add_argument("--scale", type=float, default=1,
                         help='Ratio to scale the output. Defaults to 1')
     parser.add_argument("--frameskip", default=None,
-                        help='Ratio of skipped frames in format A/B. Defaults to 0 (none skipped)')
+                        help='Ratio of skipped frames in format A/B. Defaults '
+                        'to 0 (none skipped)')
     parser.add_argument("--speed", type=float, default=1,
                         help='Speed factor. Defaults to 1')
-    parser.add_argument("--no-optimize", action='store_false', dest='optimize', default=True,
-                        help='Do NOT optimize the resulting gif')
+    parser.add_argument("--no-optimize", action='store_false', dest='optimize',
+                        default=True, help='Do NOT optimize the resulting gif')
     parser.add_argument("-f", "--fuzz", type=int, default=None,
-                        help='Fuzz percentage for gif creation. Defaults to none')
+                        help='Fuzz percentage for gif creation. '
+                        'Defaults to none')
+    parser.add_argument("--crop", type=CropArea.from_arg, default=None,
+                        help=("Rectangular area to crop from the input, "
+                              "in format width:height:x:y. Accepts "
+                              "relative and absolute values."))
     return parser
+
+
+class CropArea():
+    def __init__(self, width, height, xpos, ypos):
+        values = [width, height, xpos, ypos]
+        if any(x < 0 for x in values):
+            raise ValueError("Some dimension is negative")
+        self._percentages = all(x < 1 for x in values)
+        self._width = width
+        self._height = height
+        self._xpos = xpos
+        self._ypos = ypos
+
+    def crop_argument(self, width, height, scale=None):
+        return ":".join(map(str, self._get_values(width, height, scale)))
+
+    def _get_values(self, width, height, scale):
+        if self._percentages:
+            values = [self._width * width, self._height * height,
+                      self._xpos * width, self._ypos * height]
+        else:
+            values = [self._width, self._height, self._xpos, self._ypos]
+        if scale is not None:
+            values = [v * scale for v in values]
+        return values
+
+    @classmethod
+    def from_arg(cls, arg):
+        try:
+            width, height, xpos, ypos = map(float, arg.split(":"))
+        except ValueError:
+            raise ValueError("Invalid crop argument: '{}'".format(arg))
+        return cls(width, height, xpos, ypos)
+
 
 def start_time(start):
     res = 0
-    for x in start.split(":"):
+    for split in start.split(":"):
         res *= 60
-        res += float(x)
+        res += float(split)
     return res
+
 
 def _parse_args():
     options = _get_arg_parser().parse_args()
@@ -53,25 +95,34 @@ def _parse_args():
         try:
             options.frameskip = [int(x) for x in options.frameskip.split("/")]
         except Exception:
-            raise ArgumentError("Wrong frameskip format: '%s'" % options.frameskip)
+            raise ArgumentError("Wrong frameskip format: '%s'"
+                                % options.frameskip)
     return options
+
 
 def _extract_video_data(video):
     command = ["avprobe", video]
     proc = subprocess.Popen(command, stderr=subprocess.PIPE)
     output = proc.stderr.read()
-    w, h = re.search(RE_VIDEO_RES, output).group(1).split("x")
+    width, height = re.search(RE_VIDEO_RES, output).group(1).split("x")
     fps = re.search(RE_VIDEO_FPS, output).group(1)
-    data = VideoData(path=video, width=int(w), height=int(h), fps=round(float(fps)))
+    data = VideoData(path=video, width=int(width), height=int(height),
+                     fps=round(float(fps)))
     return data
 
-def _extract_frames(video_data, output_dir, start=None, duration=None, scale=None):
+
+def _extract_frames(video_data, output_dir, start=None, duration=None,
+                    scale=None, crop=None):
     command = ['avconv']
     if start is not None:
         command += ['-ss', str(start)]
     command += ['-i', video_data.path]
     if duration is not None:
         command += ['-t', str(duration)]
+    if crop is not None:
+        command += ['-vf', 'crop=%s' % crop.crop_argument(video_data.width,
+                                                          video_data.height,
+                                                          scale)]
     if scale is not None:
         scaled_height = int(round(video_data.height * scale))
         scaled_width = int(round(video_data.width * scale))
@@ -80,7 +131,9 @@ def _extract_frames(video_data, output_dir, start=None, duration=None, scale=Non
     logging.info("Running command: %s", command)
     subprocess.call(command)
 
-def _make_gif(frames_dir, output, fps, options, start_frame=None, end_frame=None):
+
+def _make_gif(frames_dir, output, fps, options, start_frame=None,
+              end_frame=None):
     frames = sorted(os.listdir(frames_dir))
     if start_frame is None:
         start_frame = 0
@@ -109,6 +162,7 @@ def _make_gif(frames_dir, output, fps, options, start_frame=None, end_frame=None
     logging.info("Running command: %s", command)
     subprocess.call(command)
 
+
 def main():
     logging.basicConfig(level=logging.INFO)
     options = _parse_args()
@@ -119,13 +173,15 @@ def main():
     logging.info("Temporal dir: '%s'", tmp_dir)
     try:
         logging.info("Extracting frames...")
-        _extract_frames(data, tmp_dir, options.start, options.duration, options.scale)
+        _extract_frames(data, tmp_dir, options.start, options.duration,
+                        options.scale, options.crop)
         logging.info("Got %s frames...", len(os.listdir(tmp_dir)))
         logging.info("Making output gif: '%s'", options.output)
         _make_gif(tmp_dir, options.output, data.fps, options)
         logging.info("Done.")
     finally:
         os.system("rm -rf %s" % tmp_dir)
+
 
 if __name__ == "__main__":
     main()
