@@ -57,3 +57,15 @@ Gifs are optimized by default, but output files might get quite big easily. In o
     I have no idea why anyone would ever want this, but optimization can be avoided using the `--no-optimize` flag
 
 
+Controlling the gif speed
+-------------------------
+
+Speed can be controlled via the `--speed` argument. For example
+
+`python gifmaker input.mp4 output.gif -s 10 -d 5 --speed=2`
+
+would create a gif that plays twice as fast, conversely
+
+`python gifmaker input.mp4 output.gif -s 10 -d 5 --speed=.5`
+
+would create a slow motion gif.
