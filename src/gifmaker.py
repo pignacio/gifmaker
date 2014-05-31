@@ -163,6 +163,15 @@ def _make_gif(frames_dir, output, fps, options, start_frame=None,
     subprocess.call(command)
 
 
+def _human_size(size, format='.2f', max_value=1000):
+    for unit in ['b', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb']:
+        if abs(size) < max_value:
+            break
+        size /= 1024.
+    format_str = "{{:{}}} {{}}".format(format)
+    return format_str.format(size, unit)
+
+
 def main():
     logging.basicConfig(level=logging.INFO)
     options = _parse_args()
@@ -178,7 +187,8 @@ def main():
         logging.info("Got %s frames...", len(os.listdir(tmp_dir)))
         logging.info("Making output gif: '%s'", options.output)
         _make_gif(tmp_dir, options.output, data.fps, options)
-        logging.info("Done.")
+        logging.info("Done. Final size: %s",
+                     _human_size(os.path.getsize(options.output)))
     finally:
         os.system("rm -rf %s" % tmp_dir)
 
