@@ -53,7 +53,7 @@ class CropArea():
         values = [width, height, xpos, ypos]
         if any(x < 0 for x in values):
             raise ValueError("Some dimension is negative")
-        self._percentages = all(x < 1 for x in values)
+        self._percentages = all(x <= 1 for x in values)
         self._width = width
         self._height = height
         self._xpos = xpos
