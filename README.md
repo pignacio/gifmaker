@@ -3,6 +3,11 @@ gifmaker
 
 A tool for extracting gifs from videos.
 
+Requirements:
+-------------
+
+You would need the commandline tool `avprobe` installed on your computer. It is a part of `libav` package. On OS X, you can install this with `brew install libav`.
+
 Sample Usage:
 -------------
 
