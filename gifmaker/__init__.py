@@ -45,6 +45,8 @@ def _get_arg_parser():
                         help=("Rectangular area to crop from the input, "
                               "in format width:height:x:y. Accepts "
                               "relative and absolute values."))
+    parser.add_argument("-r", "--reverse", action='store_true', default=False,
+                        help='Reverse frames?')
     return parser
 
 
@@ -157,6 +159,8 @@ def _make_gif(frames_dir, output, fps, options, start_frame=None,
         used_frames.append(frames[int(frame)])
         frame += rate
 
+    if options.reverse:
+        used_frames = reversed(used_frames)
     command += [os.path.join(frames_dir, f) for f in used_frames]
     command.append(output)
     logging.info("Running command: %s", command)
