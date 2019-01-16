@@ -61,18 +61,23 @@ class CropArea():
         self._xpos = xpos
         self._ypos = ypos
 
-    def crop_argument(self, width, height, scale=None):
-        return ":".join(map(str, self._get_values(width, height, scale)))
+    @property
+    def height(self):
+        return self._height
 
-    def _get_values(self, width, height, scale):
+    @property
+    def width(self):
+        return self._width
+
+    def crop_argument(self, width, height):
+        return ":".join(map(str, self._get_values(width, height)))
+
+    def _get_values(self, width, height):
         if self._percentages:
-            values = [self._width * width, self._height * height,
+            return [self._width * width, self._height * height,
                       self._xpos * width, self._ypos * height]
         else:
-            values = [self._width, self._height, self._xpos, self._ypos]
-        if scale is not None:
-            values = [v * scale for v in values]
-        return values
+            return [self._width, self._height, self._xpos, self._ypos]
 
     @classmethod
     def from_arg(cls, arg):
@@ -123,12 +128,17 @@ def _extract_frames(video_data, output_dir, start=None, duration=None,
         command += ['-t', str(duration)]
     if crop is not None:
         command += ['-vf', 'crop=%s' % crop.crop_argument(video_data.width,
-                                                          video_data.height,
-                                                          scale)]
-    if scale is not None:
-        scaled_height = int(round(video_data.height * scale))
-        scaled_width = int(round(video_data.width * scale))
-        command += ['-s', '%sx%s' % (scaled_width, scaled_height)]
+                                                          video_data.height)]
+        height = crop.height
+        width = crop.width
+    else:
+        height = video_data.height
+        width = video_data.width
+
+    scale = 1 if scale is None else scale
+    scaled_height = int(round(height * scale))
+    scaled_width = int(round(width * scale))
+    command += ['-s', '%sx%s' % (scaled_width, scaled_height)]
     command.append(os.path.join(output_dir, 'frames%05d.png'))
     logging.info("Running command: %s", command)
     subprocess.call(command)
